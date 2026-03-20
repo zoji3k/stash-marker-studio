@@ -447,6 +447,16 @@ export default function MarkerPage({ params }: { params: Promise<{ sceneId: stri
     dispatch,
   ]);
 
+  const nextSceneId = useMemo(() => {
+    try {
+      const list: string[] = JSON.parse(sessionStorage.getItem("scene-list") ?? "[]");
+      const idx = list.indexOf(scene?.id ?? "");
+      return idx >= 0 && idx < list.length - 1 ? list[idx + 1] : null;
+    } catch {
+      return null;
+    }
+  }, [scene?.id]);
+
   // executeCompletion now comes from useMarkerOperations hook
   // Create wrapper function to handle state dependencies
   const executeCompletionWrapper = useCallback(async (selectedActions: import("../../../serverConfig").CompletionDefaults) => {
@@ -489,7 +499,10 @@ export default function MarkerPage({ params }: { params: Promise<{ sceneId: stri
     }
 
     await executeCompletion(modalData.videoCutMarkersToDelete, selectedActions);
-  }, [executeCompletion, completionModalData, dispatch, actionMarkers, scene]);
+    if (selectedActions.switchToNextScene && nextSceneId) {
+      router.push(`/marker/${nextSceneId}`);
+    }
+  }, [executeCompletion, completionModalData, dispatch, actionMarkers, scene, nextSceneId, router]);
 
   // Wrapper for keyboard shortcuts - opens completion modal
   const executeCompletionFromKeyboard = useCallback(() => {
@@ -1206,6 +1219,7 @@ export default function MarkerPage({ params }: { params: Promise<{ sceneId: stri
         tagsToRemove={completionModalData?.tagsToRemove || []}
         rejectedMarkersCount={actionMarkers?.filter(isMarkerRejected).length ?? 0}
         correspondingTagsCount={actionMarkers?.filter(m => isMarkerConfirmed(m) && (m.primary_tag.description ?? "").toLowerCase().includes("corresponding tag:")).length ?? 0}
+        hasNextScene={nextSceneId !== null}
         onCancel={() => dispatch(closeModal())}
         onConfirm={executeCompletionWrapper}
       />
