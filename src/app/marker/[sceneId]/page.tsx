@@ -74,6 +74,8 @@ import {
   isShotBoundaryMarker,
   filterUnprocessedMarkers,
   getMarkerStatus,
+  isMarkerRejected,
+  isMarkerConfirmed,
 } from "../../../core/marker/markerLogic";
 import { MarkerStatus } from "../../../core/marker/types";
 
@@ -448,16 +450,46 @@ export default function MarkerPage({ params }: { params: Promise<{ sceneId: stri
   // executeCompletion now comes from useMarkerOperations hook
   // Create wrapper function to handle state dependencies
   const executeCompletionWrapper = useCallback(async (selectedActions: import("../../../serverConfig").CompletionDefaults) => {
-    // Get current modal data
     const modalData = completionModalData;
     if (!modalData) return;
-    
-    // Close modal when completion starts
     dispatch(closeModal());
-    
-    // Call the hook's executeCompletion with the modal data and selected actions
+
+    // Pre-step A: Delete rejected markers (if selected)
+    if (selectedActions.deleteRejected) {
+      const rejected = actionMarkers?.filter(isMarkerRejected) ?? [];
+      if (rejected.length > 0) {
+        try {
+          await stashappService.deleteMarkers(rejected.map(m => m.id));
+          if (scene?.id) await dispatch(loadMarkers(scene.id)).unwrap();
+        } catch (err) {
+          console.error("Error deleting rejected markers during completion:", err);
+          dispatch(setError(`Failed to delete rejected markers: ${err}`));
+          return;
+        }
+      }
+    }
+
+    // Pre-step B: Convert corresponding tags (if selected)
+    // Note: this intentionally duplicates the logic from handleConfirmCorrespondingTagConversion
+    // in useMarkerOperations — that function relies on pre-fetched Redux modal state, which is
+    // not available here after the modal is closed. Inline duplication is intentional.
+    if (selectedActions.convertCorrespondingTags) {
+      const currentActionMarkers = actionMarkers ?? [];
+      try {
+        const markersToConvert = await stashappService.convertConfirmedMarkersWithCorrespondingTags(currentActionMarkers);
+        for (const { sourceMarker, correspondingTag } of markersToConvert) {
+          await stashappService.updateMarkerTagAndTitle(sourceMarker.id, correspondingTag.id);
+        }
+        if (scene?.id && markersToConvert.length > 0) await dispatch(loadMarkers(scene.id)).unwrap();
+      } catch (err) {
+        console.error("Error converting corresponding tags during completion:", err);
+        dispatch(setError(`Failed to convert corresponding tags: ${err}`));
+        return;
+      }
+    }
+
     await executeCompletion(modalData.videoCutMarkersToDelete, selectedActions);
-  }, [executeCompletion, completionModalData, dispatch]);
+  }, [executeCompletion, completionModalData, dispatch, actionMarkers, scene]);
 
   // Wrapper for keyboard shortcuts - opens completion modal
   const executeCompletionFromKeyboard = useCallback(() => {
@@ -1172,6 +1204,8 @@ export default function MarkerPage({ params }: { params: Promise<{ sceneId: stri
         hasAiReviewedTag={completionModalData?.hasAiReviewedTag || false}
         primaryTagsToAdd={completionModalData?.primaryTagsToAdd || []}
         tagsToRemove={completionModalData?.tagsToRemove || []}
+        rejectedMarkersCount={actionMarkers?.filter(isMarkerRejected).length ?? 0}
+        correspondingTagsCount={actionMarkers?.filter(m => isMarkerConfirmed(m) && (m.primary_tag.description ?? "").toLowerCase().includes("corresponding tag:")).length ?? 0}
         onCancel={() => dispatch(closeModal())}
         onConfirm={executeCompletionWrapper}
       />
