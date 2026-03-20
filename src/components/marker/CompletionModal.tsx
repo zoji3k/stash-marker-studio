@@ -11,6 +11,8 @@ interface CompletionModalProps {
   hasAiReviewedTag: boolean;
   primaryTagsToAdd: Tag[];
   tagsToRemove: Tag[];
+  rejectedMarkersCount: number;
+  correspondingTagsCount: number;
   onCancel: () => void;
   onConfirm: (selectedActions: CompletionDefaults) => void;
 }
@@ -22,6 +24,8 @@ export function CompletionModal({
   hasAiReviewedTag,
   primaryTagsToAdd,
   tagsToRemove,
+  rejectedMarkersCount,
+  correspondingTagsCount,
   onCancel,
   onConfirm,
 }: CompletionModalProps) {
@@ -31,6 +35,8 @@ export function CompletionModal({
     addAiReviewedTag: true,
     addPrimaryTags: true,
     removeCorrespondingTags: true,
+    deleteRejected: true,
+    convertCorrespondingTags: true,
   });
 
   useEffect(() => {
@@ -46,7 +52,16 @@ export function CompletionModal({
       if (response.ok) {
         const config = await response.json();
         if (config.completionDefaults) {
-          setSelectedActions(config.completionDefaults);
+          setSelectedActions({
+            deleteVideoCutMarkers: true,
+            generateMarkers: true,
+            addAiReviewedTag: true,
+            addPrimaryTags: true,
+            removeCorrespondingTags: true,
+            deleteRejected: true,
+            convertCorrespondingTags: true,
+            ...config.completionDefaults,
+          });
         }
       }
     } catch (error) {
@@ -117,6 +132,42 @@ export function CompletionModal({
         <div className="mb-4">
           <p className="mb-3">Select which actions to perform:</p>
           <div className="space-y-3">
+            <div className="flex items-start space-x-3">
+              <input
+                type="checkbox"
+                id="deleteRejected"
+                checked={selectedActions.deleteRejected ?? true}
+                onChange={() => handleActionToggle('deleteRejected')}
+                className="mt-1 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+              <label htmlFor="deleteRejected" className="text-sm text-gray-300 flex-1">
+                <span className="font-medium">Delete rejected markers</span>
+                {rejectedMarkersCount > 0 ? (
+                  <span className="text-red-300"> ({rejectedMarkersCount} marker{rejectedMarkersCount !== 1 ? "s" : ""})</span>
+                ) : (
+                  <span className="text-gray-500"> (none)</span>
+                )}
+              </label>
+            </div>
+
+            <div className="flex items-start space-x-3">
+              <input
+                type="checkbox"
+                id="convertCorrespondingTags"
+                checked={selectedActions.convertCorrespondingTags ?? true}
+                onChange={() => handleActionToggle('convertCorrespondingTags')}
+                className="mt-1 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+              />
+              <label htmlFor="convertCorrespondingTags" className="text-sm text-gray-300 flex-1">
+                <span className="font-medium">Convert corresponding tags</span>
+                {correspondingTagsCount > 0 ? (
+                  <span className="text-teal-300"> ({correspondingTagsCount} marker{correspondingTagsCount !== 1 ? "s" : ""})</span>
+                ) : (
+                  <span className="text-gray-500"> (none)</span>
+                )}
+              </label>
+            </div>
+
             <div className="flex items-start space-x-3">
               <input
                 type="checkbox"
