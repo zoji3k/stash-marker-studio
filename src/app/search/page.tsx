@@ -181,9 +181,10 @@ export default function SearchPage() {
 
   const handleSceneClick = useCallback(
     (sceneId: string) => {
+      sessionStorage.setItem("scene-list", JSON.stringify(scenes.map(s => s.id)));
       router.push(`/marker/${sceneId}`);
     },
-    [router]
+    [router, scenes]
   );
 
   const handleSettingsClick = useCallback(() => {
