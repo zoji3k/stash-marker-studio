@@ -25,7 +25,7 @@ This captures the list as it was ordered at the moment the user clicked (respect
 switchToNextScene?: boolean;
 ```
 
-Optional, so existing saved configs without it default to `true` in the modal (same pattern as the other pre-step fields added previously).
+Optional, so existing saved configs without it default to `true` in the modal (same pattern as the other pre-step fields). This field is persisted when the user clicks "Save as Default", like all other `CompletionDefaults` fields.
 
 ### 3. New prop and checkbox in `CompletionModal` (`src/components/marker/CompletionModal.tsx`)
 
@@ -37,21 +37,20 @@ hasNextScene: boolean;
 When `hasNextScene` is `true`, render a new checkbox at the **bottom** of the action list:
 
 - Label: **"Switch to next scene after completing"**
-- Default checked: `true` (when `hasNextScene` is true)
+- Default checked: `true`
 - `id="switchToNextScene"`
 - Driven by `selectedActions.switchToNextScene ?? true`
 
-When `hasNextScene` is `false`, the checkbox is not rendered (no next scene available).
+When `hasNextScene` is `false`, the checkbox is not rendered. Because the checkbox is gated on `hasNextScene`, `selectedActions.switchToNextScene` can only be `true` when a next scene actually exists.
 
-Update `useState` initial value and `loadDefaults` spread to include `switchToNextScene: true` (same backward-compat spread pattern used for `deleteRejected` and `convertCorrespondingTags`).
+Update `useState` initial value and `loadDefaults` spread to include `switchToNextScene: true`. In `loadDefaults`, use the same backward-compat spread pattern as the other fields: provide `switchToNextScene: true` as the default, then spread `...config.completionDefaults` on top, so a saved `false` preference is respected. The `true` default only applies when the field is absent from saved config.
 
 ### 4. Wire up in `page.tsx` (`src/app/marker/[sceneId]/page.tsx`)
 
-**Compute `hasNextScene`:**
+**Compute `nextSceneId`** inside the component body (client component), declared before `executeCompletionWrapper` so the callback can close over it:
 
 ```typescript
 const nextSceneId = useMemo(() => {
-  if (typeof window === "undefined") return null;
   try {
     const list: string[] = JSON.parse(sessionStorage.getItem("scene-list") ?? "[]");
     const idx = list.indexOf(scene?.id ?? "");
@@ -62,26 +61,30 @@ const nextSceneId = useMemo(() => {
 }, [scene?.id]);
 ```
 
+`scene` is initially `null` in Redux until the data loads, so `nextSceneId` will be `null` on the first render and resolve to the correct value once the scene is available. This means the checkbox may briefly not render on initial load — this is acceptable UX since the modal is not open on first render anyway.
+
 Pass `hasNextScene={nextSceneId !== null}` to `<CompletionModal>`.
 
-**After completion in `executeCompletionWrapper`:**
+**After completion in `executeCompletionWrapper`** (this is a `useCallback` defined inside the component body, so it closes over `nextSceneId`; this function requires modification):
 
-After `await executeCompletion(...)`, if `selectedActions.switchToNextScene` and `nextSceneId` is not null, navigate:
+After `await executeCompletion(...)`, navigate if selected:
 
 ```typescript
 if (selectedActions.switchToNextScene && nextSceneId) {
   router.push(`/marker/${nextSceneId}`);
-} else if (selectedActions.switchToNextScene && !nextSceneId) {
-  router.push("/search");
 }
 ```
 
-If `switchToNextScene` is false (unchecked), do nothing — stay on the current scene as today.
+The `else` branch (navigate to `/search`) is not needed: when `nextSceneId` is null, `hasNextScene` is false and the checkbox is not rendered, so `switchToNextScene` can never be `true` in that case.
+
+`nextSceneId` must be added to the `useCallback` dependency array.
+
+If `switchToNextScene` is false (unchecked), stay on the current scene as today.
 
 ## Edge Cases
 
-- **Last scene in list**: `nextSceneId` is null → `hasNextScene` is false → checkbox is not shown
-- **No scene list in sessionStorage** (user navigated directly): `nextSceneId` is null → checkbox not shown
+- **Last scene in list**: `nextSceneId` is null → `hasNextScene` is false → checkbox not shown
+- **No scene list in sessionStorage** (user navigated directly to the page): `nextSceneId` is null → checkbox not shown
 - **Malformed sessionStorage data**: caught by try/catch → `nextSceneId` is null
 - **Scene ID not found in list**: `indexOf` returns -1 → `nextSceneId` is null
 
