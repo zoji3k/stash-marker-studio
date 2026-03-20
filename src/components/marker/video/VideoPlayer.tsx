@@ -54,18 +54,26 @@ export function VideoPlayer({ className = "" }: VideoPlayerProps) {
 
   // Video element stays local - following Redux migration architecture decision
 
+  // Restore persisted volume/mute on mount
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const savedVolume = localStorage.getItem("player-volume");
+    const savedMuted = localStorage.getItem("player-muted");
+    if (savedVolume !== null) video.volume = parseFloat(savedVolume);
+    if (savedMuted !== null) video.muted = savedMuted === "true";
+  }, []);
+
   // Set up video event listeners to dispatch metadata updates to Redux
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
 
     const handleLoadedMetadata = () => {
-      // Update Redux only - MarkerContext removed
       dispatch(setVideoDuration(video.duration));
     };
 
     const handleTimeUpdate = () => {
-      // Update Redux only - MarkerContext removed
       dispatch(setCurrentVideoTime(video.currentTime));
     };
 
@@ -77,15 +85,19 @@ export function VideoPlayer({ className = "" }: VideoPlayerProps) {
       dispatch(setVideoPlaying(false));
     };
 
-    // Add all event listeners
+    const handleVolumeChange = () => {
+      localStorage.setItem("player-volume", String(video.volume));
+      localStorage.setItem("player-muted", String(video.muted));
+    };
+
     video.addEventListener("loadedmetadata", handleLoadedMetadata);
     video.addEventListener("timeupdate", handleTimeUpdate);
     video.addEventListener("seeking", handleTimeUpdate);
     video.addEventListener("seeked", handleTimeUpdate);
     video.addEventListener("play", handlePlay);
     video.addEventListener("pause", handlePause);
+    video.addEventListener("volumechange", handleVolumeChange);
 
-    // Cleanup function
     return () => {
       video.removeEventListener("loadedmetadata", handleLoadedMetadata);
       video.removeEventListener("timeupdate", handleTimeUpdate);
@@ -93,8 +105,9 @@ export function VideoPlayer({ className = "" }: VideoPlayerProps) {
       video.removeEventListener("seeked", handleTimeUpdate);
       video.removeEventListener("play", handlePlay);
       video.removeEventListener("pause", handlePause);
+      video.removeEventListener("volumechange", handleVolumeChange);
     };
-  }, [dispatch]); // Redux dispatch for video metadata updates
+  }, [dispatch]);
 
   if (!scene) {
     return null;
