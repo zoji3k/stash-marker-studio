@@ -20,6 +20,8 @@ export interface CompletionDefaults {
   addAiReviewedTag: boolean;
   addPrimaryTags: boolean;
   removeCorrespondingTags: boolean;
+  deleteRejected?: boolean;
+  convertCorrespondingTags?: boolean;
 }
 
 export interface ServerConfig {
