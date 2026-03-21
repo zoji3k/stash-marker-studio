@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { useAppSelector, useAppDispatch } from "../store/hooks";
 import {
   stashappService,
@@ -57,6 +57,17 @@ export const useMarkerOperations = (
   const deleteRejectedModalData = useAppSelector(selectDeleteRejectedModalData);
   const correspondingTagConversionModalData = useAppSelector(selectCorrespondingTagConversionModalData);
   const copiedMarkerTimes = useAppSelector(selectCopiedMarkerTimes);
+
+  // Track the refresh timeout so we can cancel it on unmount (prevents stale dispatch
+  // when the user navigates away before the 2s marker-generation delay completes)
+  const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (refreshTimeoutRef.current !== null) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Get action markers helper
   const getActionMarkers = useCallback(() => {
@@ -504,7 +515,9 @@ export const useMarkerOperations = (
       }
 
       // Step 5: Refresh markers to show generated content
-      setTimeout(() => {
+      // Use a ref-tracked timeout so it's cancelled if the component unmounts
+      // (e.g. when "switch to next scene" navigates away before the delay fires)
+      refreshTimeoutRef.current = setTimeout(() => {
         if (scene?.id) dispatch(loadMarkers(scene.id));
       }, 2000); // Give generation time to complete
 
