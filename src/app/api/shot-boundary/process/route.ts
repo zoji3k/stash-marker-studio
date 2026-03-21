@@ -97,16 +97,12 @@ async function downscaleVideo(inputPath: string, tempDir: string): Promise<strin
   const outputPath = path.join(tempDir, `${randomUUID()}.540p${ext}`);
 
   await new Promise<void>((resolve, reject) => {
-    const ffmpeg = spawn("/app/ffmpeg", [
-      "-hwaccel", "cuda",
-      "-hwaccel_output_format", "cuda",
+    const ffmpeg = spawn("ffmpeg", [
       "-i", inputPath,
-      "-vf", "scale_cuda=960:540",
-      "-c:v", "h264_nvenc",
-      "-preset", "p1",
-      "-tune", "ll",
-      "-rc", "cbr",
-      "-b:v", "1M",
+      "-vf", "scale=960:540",
+      "-c:v", "libx264",
+      "-preset", "ultrafast",
+      "-crf", "28",
       "-an",
       outputPath,
     ], { stdio: ["ignore", "ignore", "pipe"] });
