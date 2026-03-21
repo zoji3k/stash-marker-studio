@@ -20,6 +20,9 @@ interface MarkerPageHeaderProps {
   onOpenCollectModal: () => void;
   onCorrespondingTagConversion: () => void;
   onComplete: () => void;
+  isShotBoundaryProcessed: boolean;
+  isDetectingShots: boolean;
+  onDetectShots: () => void;
 }
 
 export function MarkerPageHeader({
@@ -32,6 +35,9 @@ export function MarkerPageHeader({
   onOpenCollectModal,
   onCorrespondingTagConversion,
   onComplete,
+  isShotBoundaryProcessed,
+  isDetectingShots,
+  onDetectShots,
 }: MarkerPageHeaderProps) {
   const router = useRouter();
   const stashUrl = useAppSelector(selectStashUrl);
@@ -210,6 +216,19 @@ export function MarkerPageHeader({
                       {correspondingTagsCount}
                     </span>
                   )}
+                </button>
+                <button
+                  onClick={() => handleMenuAction(onDetectShots)}
+                  disabled={isLoading || isDetectingShots}
+                  className="w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between text-blue-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <span>
+                    {isDetectingShots
+                      ? "Detecting…"
+                      : isShotBoundaryProcessed
+                      ? "Re-detect Shots"
+                      : "Detect Shots"}
+                  </span>
                 </button>
               </div>
             )}
