@@ -34,6 +34,8 @@ export function CompletionModal({
   onPage2Confirm,
 }: CompletionModalProps) {
   const [manualTagsToAdd, setManualTagsToAdd] = useState<Tag[]>([]);
+  const [allTags, setAllTags] = useState<Tag[]>([]);
+  const [tagSearchInput, setTagSearchInput] = useState("");
   const [selectedActions, setSelectedActions] = useState<CompletionDefaults>({
     deleteVideoCutMarkers: true,
     generateMarkers: true,
@@ -50,6 +52,8 @@ export function CompletionModal({
     if (isOpen) {
       setCurrentPage("page1");
       setManualTagsToAdd([]);
+      setAllTags([]);
+      setTagSearchInput("");
       loadDefaults();
     }
   }, [isOpen]);
@@ -60,6 +64,16 @@ export function CompletionModal({
       setCurrentPage("page2");
     }
   }, [page2Data, currentPage]);
+
+  // Fetch all tags when page 2 becomes active
+  useEffect(() => {
+    if (currentPage !== "page2") return;
+    stashappService.getAllTags().then(result => {
+      setAllTags(result.findTags.tags);
+    }).catch(err => {
+      console.warn("Failed to load tags for search:", err);
+    });
+  }, [currentPage]);
 
   const loadDefaults = async () => {
     try {
@@ -171,6 +185,14 @@ export function CompletionModal({
       ...primaryTagsToAdd,
       ...manualTagsToAdd.filter(t => !primaryTagsToAdd.some(p => p.id === t.id)),
     ];
+    const tagSuggestions: Tag[] =
+      tagSearchInput.length < 2
+        ? []
+        : allTags.filter(t =>
+            !t.name.endsWith("_AI") &&
+            t.name.toLowerCase().includes(tagSearchInput.toLowerCase()) &&
+            !effectivePrimaryTagsToAdd.some(p => p.id === t.id)
+          ).slice(0, 10);
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div className="bg-gray-800 p-6 rounded-lg max-w-2xl w-full relative">
@@ -246,6 +268,34 @@ export function CompletionModal({
             </div>
           </div>
 
+          <div className="mt-4 relative">
+            <input
+              type="text"
+              value={tagSearchInput}
+              onChange={e => setTagSearchInput(e.target.value)}
+              onKeyDown={e => { if (e.key === "Escape") setTagSearchInput(""); }}
+              placeholder="Search tags to add…"
+              className="w-full px-3 py-2 bg-gray-700 text-gray-100 border border-gray-600 rounded-sm text-sm placeholder-gray-400 focus:outline-none focus:border-teal-500"
+            />
+            {tagSuggestions.length > 0 && (
+              <ul className="absolute z-10 w-full mt-1 bg-gray-700 border border-gray-600 rounded-sm shadow-lg max-h-48 overflow-y-auto">
+                {tagSuggestions.map(tag => (
+                  <li key={tag.id}>
+                    <button
+                      onClick={() => {
+                        setManualTagsToAdd(prev => [...prev, tag]);
+                        setTagSearchInput("");
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-100 hover:bg-gray-600 transition-colors font-mono"
+                    >
+                      {tag.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           {effectivePrimaryTagsToAdd.length > 0 && (
             <div className="mt-4 p-3 bg-green-900/30 border border-green-600/50 rounded">
               <h4 className="font-semibold text-green-200 mb-2">
@@ -259,9 +309,10 @@ export function CompletionModal({
                       key={`add-${tag.id}`}
                       onClick={() => setManualTagsToAdd(prev => prev.filter(m => m.id !== tag.id))}
                       title="Click to remove"
-                      className="px-2 py-1 bg-teal-800/50 text-teal-200 rounded-sm text-xs font-mono hover:bg-teal-700/70 transition-colors cursor-pointer"
+                      className="px-2 py-1 bg-teal-800/50 text-teal-200 rounded-sm text-xs font-mono hover:bg-teal-700/70 transition-colors cursor-pointer flex items-center gap-1"
                     >
                       {tag.name}
+                      <span className="text-teal-400 leading-none">×</span>
                     </button>
                   ) : (
                     <span
