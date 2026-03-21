@@ -117,12 +117,7 @@ async function runSceneDetection(videoPath: string, tempDir: string): Promise<vo
       });
     });
 
-  try {
-    await runWithBackend("pyav");
-  } catch {
-    // pyav can fail on videos with corrupt/non-standard encoding; opencv is more tolerant
-    await runWithBackend("opencv");
-  }
+  await runWithBackend("opencv");
 }
 
 async function findAndCopyCSV(tempDir: string, originalVideoPath: string): Promise<string | null> {

@@ -29,11 +29,10 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Install ffmpeg and PySceneDetect
-# py3-opencv from Alpine is a pre-built musl-compatible cv2 (satisfies scenedetect's import)
-# pyav backend is used for actual video I/O so codec support is via ffmpeg, not OpenCV
+# Install ffmpeg and PySceneDetect with OpenCV backend
+# py3-opencv from Alpine is pre-built for musl and handles video I/O including corrupt files
 RUN apk add --no-cache python3 py3-pip py3-opencv ffmpeg \
-  && pip install --break-system-packages --root-user-action=ignore "scenedetect[pyav]" \
+  && pip install --break-system-packages --root-user-action=ignore scenedetect \
   && pip cache purge \
   && rm -rf /root/.cache/pip
 
