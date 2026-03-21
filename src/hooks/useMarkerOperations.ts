@@ -58,6 +58,14 @@ export const useMarkerOperations = (
   const correspondingTagConversionModalData = useAppSelector(selectCorrespondingTagConversionModalData);
   const copiedMarkerTimes = useAppSelector(selectCopiedMarkerTimes);
 
+  // Keep a ref to actionMarkers so async callbacks (executeCompletion) always read
+  // the latest value even if Redux updated mid-execution (e.g. after pre-step B
+  // converts corresponding tags and re-dispatches loadMarkers)
+  const actionMarkersRef = useRef<SceneMarker[]>(actionMarkers);
+  useEffect(() => {
+    actionMarkersRef.current = actionMarkers;
+  }, [actionMarkers]);
+
   // Track the refresh timeout so we can cancel it on unmount (prevents stale dispatch
   // when the user navigates away before the 2s marker-generation delay completes)
   const refreshTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -69,10 +77,11 @@ export const useMarkerOperations = (
     };
   }, []);
 
-  // Get action markers helper
+  // Get action markers helper — reads from ref so async callers always get the
+  // latest value after mid-execution Redux updates (e.g. post pre-step reloads)
   const getActionMarkers = useCallback(() => {
-    return actionMarkers;
-  }, [actionMarkers]);
+    return actionMarkersRef.current;
+  }, []);
 
   // Calculate marker summary
   const getMarkerSummary = useCallback(() => {
