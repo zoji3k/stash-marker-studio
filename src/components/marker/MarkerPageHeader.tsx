@@ -141,6 +141,15 @@ export function MarkerPageHeader({
         {/* Right: action buttons + settings */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <button
+            onClick={onDetectShots}
+            disabled={isLoading || isDetectingShots}
+            className="px-3 py-1.5 rounded-sm text-sm transition-colors text-blue-300 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={isShotBoundaryProcessed ? "Re-detect shot boundaries" : "Detect shot boundaries"}
+          >
+            {isDetectingShots ? "Detecting…" : isShotBoundaryProcessed ? "Re-detect Shots" : "Detect Shots"}
+          </button>
+
+          <button
             onClick={onComplete}
             disabled={isLoading}
             className={`px-3 py-1.5 rounded-sm text-sm font-medium transition-colors ${
@@ -216,19 +225,6 @@ export function MarkerPageHeader({
                       {correspondingTagsCount}
                     </span>
                   )}
-                </button>
-                <button
-                  onClick={() => handleMenuAction(onDetectShots)}
-                  disabled={isLoading || isDetectingShots}
-                  className="w-full text-left px-4 py-2.5 text-sm transition-colors flex items-center justify-between text-blue-300 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span>
-                    {isDetectingShots
-                      ? "Detecting…"
-                      : isShotBoundaryProcessed
-                      ? "Re-detect Shots"
-                      : "Detect Shots"}
-                  </span>
                 </button>
               </div>
             )}
