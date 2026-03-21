@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import { spawn } from "child_process";
-import { randomUUID } from "crypto";
 import os from "os";
 import type { AppConfig } from "@/serverConfig";
 
@@ -92,39 +91,13 @@ async function cleanupTemp(tempDir: string): Promise<void> {
   }
 }
 
-async function downscaleVideo(inputPath: string, tempDir: string): Promise<string> {
-  const ext = path.extname(inputPath);
-  const outputPath = path.join(tempDir, `${randomUUID()}.540p${ext}`);
-
-  await new Promise<void>((resolve, reject) => {
-    const ffmpeg = spawn("ffmpeg", [
-      "-i", inputPath,
-      "-vf", "scale=960:540",
-      "-c:v", "libx264",
-      "-preset", "ultrafast",
-      "-crf", "28",
-      "-an",
-      outputPath,
-    ], { stdio: ["ignore", "ignore", "pipe"] });
-
-    let stderr = "";
-    ffmpeg.stderr.on("data", (d: Buffer) => { stderr += d.toString(); });
-
-    ffmpeg.on("error", reject);
-    ffmpeg.on("close", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`ffmpeg exited with code ${code}: ${stderr.slice(-300)}`));
-    });
-  });
-
-  return outputPath;
-}
 
 async function runSceneDetection(videoPath: string, tempDir: string): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const scenedetect = spawn("scenedetect", [
       "--input", videoPath,
       "--output", tempDir,
+      "--backend", "pyav",
       "detect-content",
       "list-scenes",
     ], { stdio: ["ignore", "pipe", "pipe"] });
@@ -239,8 +212,7 @@ export async function POST(request: NextRequest) {
 
     const tempDir = await createTempDir();
     try {
-      const downscaled = await downscaleVideo(videoPath, tempDir);
-      await runSceneDetection(downscaled, tempDir);
+      await runSceneDetection(videoPath, tempDir);
       const csvPath = await findAndCopyCSV(tempDir, videoPath);
       if (!csvPath) throw new Error("Scene detection produced no CSV output");
       await createMarkersFromCSV(sceneId, csvPath, tagName, config);

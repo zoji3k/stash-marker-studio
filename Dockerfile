@@ -30,11 +30,12 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Install ffmpeg and PySceneDetect
-RUN apk add --no-cache alpine-sdk python3 python3-dev py3-pip ffmpeg linux-headers \
-  && pip install --break-system-packages --root-user-action=ignore scenedetect[opencv] \
+# py3-opencv from Alpine is a pre-built musl-compatible cv2 (satisfies scenedetect's import)
+# pyav backend is used for actual video I/O so codec support is via ffmpeg, not OpenCV
+RUN apk add --no-cache python3 py3-pip py3-opencv ffmpeg \
+  && pip install --break-system-packages --root-user-action=ignore "scenedetect[pyav]" \
   && pip cache purge \
-  && apk del alpine-sdk python3-dev linux-headers \
-  && rm -rf /var/cache/apk/* /root/.cache/pip
+  && rm -rf /root/.cache/pip
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
