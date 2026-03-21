@@ -126,7 +126,7 @@ export function CompletionModal({
     onPage1Confirm(selectedActions);
   };
 
-  const handleRemoveTagClick = async (tag: Tag) => {
+  const handleRemoveTagClick = (tag: Tag) => {
     const desc = tag.description ?? "";
     if (!desc.toLowerCase().includes("corresponding tag:")) return;
     const correspondingName = desc.split(/corresponding tag:/i)[1].trim();
@@ -139,18 +139,10 @@ export function CompletionModal({
     ];
     if (effectiveList.some(t => t.name === correspondingName)) return;
 
-    const lookup = await stashappService.buildCorrespondingTagLookupTable();
-    let resolved: Tag | null = null;
-    const entries = Array.from(lookup.values());
-    for (const entry of entries) {
-      if (entry.correspondingTag?.name === correspondingName) {
-        resolved = entry.correspondingTag;
-        break;
-      }
-    }
+    const resolved = allTags.find(t => t.name === correspondingName) ?? null;
     if (!resolved) return;
 
-    setManualTagsToAdd(prev => [...prev, resolved!]);
+    setManualTagsToAdd(prev => [...prev, resolved]);
   };
 
   if (!isOpen) return null;
