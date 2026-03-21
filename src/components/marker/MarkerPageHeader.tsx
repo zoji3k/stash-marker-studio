@@ -22,7 +22,6 @@ interface MarkerPageHeaderProps {
   onComplete: () => void;
   isShotBoundaryProcessed: boolean;
   isDetectingShots: boolean;
-  detectProgress: number;
   onDetectShots: () => void;
 }
 
@@ -38,7 +37,6 @@ export function MarkerPageHeader({
   onComplete,
   isShotBoundaryProcessed,
   isDetectingShots,
-  detectProgress,
   onDetectShots,
 }: MarkerPageHeaderProps) {
   const router = useRouter();
@@ -148,7 +146,15 @@ export function MarkerPageHeader({
             className="px-3 py-1.5 rounded-sm text-sm transition-colors text-blue-300 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
             title={isShotBoundaryProcessed ? "Re-detect shot boundaries" : "Detect shot boundaries"}
           >
-            {isDetectingShots ? `Detecting… ${Math.round(detectProgress)}%` : isShotBoundaryProcessed ? "Re-detect Shots" : "Detect Shots"}
+            {isDetectingShots ? (
+              <span className="flex items-center gap-1.5">
+                <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Detecting…
+              </span>
+            ) : isShotBoundaryProcessed ? "Re-detect Shots" : "Detect Shots"}
           </button>
 
           <button
