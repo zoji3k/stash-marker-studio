@@ -98,7 +98,7 @@ async function runSceneDetection(videoPath: string, tempDir: string): Promise<vo
       "--input", videoPath,
       "--output", tempDir,
       "--backend", "pyav",
-      "detect-content",
+      "detect-content", "--threshold", "20", "--min-scene-len", "2s",
       "list-scenes",
     ], { stdio: ["ignore", "pipe", "pipe"] });
 
