@@ -129,7 +129,8 @@ export default function MarkerPage({ params }: { params: Promise<{ sceneId: stri
   );
 
   const [isDetectingShots, setIsDetectingShots] = useState(false);
-  const isShotBoundaryProcessed = !!scene?.tags?.some(
+  const [localShotBoundaryProcessed, setLocalShotBoundaryProcessed] = useState(false);
+  const isShotBoundaryProcessed = localShotBoundaryProcessed || !!scene?.tags?.some(
     (t) => t.id === shotBoundaryConfig.shotBoundaryProcessed
   );
 
@@ -1118,6 +1119,7 @@ export default function MarkerPage({ params }: { params: Promise<{ sceneId: stri
       const result = await response.json() as { success: boolean; error?: string };
       if (result.success) {
         showToast("Shot boundaries detected successfully", "success");
+        setLocalShotBoundaryProcessed(true);
         await dispatch(loadMarkers(scene.id)).unwrap();
       } else {
         showToast(`Shot boundary detection failed: ${result.error ?? "Unknown error"}`, "error");
