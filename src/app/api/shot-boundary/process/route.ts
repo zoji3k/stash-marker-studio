@@ -32,6 +32,7 @@ async function gql(config: GqlConfig, query: string, variables?: Record<string, 
     headers: { "Content-Type": "application/json", ApiKey: config.apiKey },
     body: JSON.stringify({ query, variables }),
   });
+  if (!response.ok) throw new Error(`GraphQL request failed: HTTP ${response.status}`);
   const result = await response.json() as { data: Record<string, unknown>; errors?: Array<{ message: string }> };
   if (result.errors?.length) throw new Error(result.errors[0].message);
   return result.data;
@@ -74,7 +75,9 @@ async function getTagName(tagId: string, config: GqlConfig): Promise<string> {
   const data = await gql(config, `
     query FindTag($id: ID!) { findTag(id: $id) { name } }
   `, { id: tagId });
-  return (data.findTag as { name: string }).name;
+  const tag = data.findTag as { name: string } | null;
+  if (!tag) throw new Error(`Tag not found: ${tagId}`);
+  return tag.name;
 }
 
 async function createTempDir(): Promise<string> {
