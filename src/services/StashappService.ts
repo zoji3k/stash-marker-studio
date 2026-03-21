@@ -518,6 +518,9 @@ export class StashappService {
           scenes {
             id
             title
+            files {
+              basename
+            }
             paths {
               screenshot
             }
