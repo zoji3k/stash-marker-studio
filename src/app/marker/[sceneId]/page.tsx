@@ -1069,6 +1069,10 @@ export default function MarkerPage({ params }: { params: Promise<{ sceneId: stri
     }
   }, [scene?.id, dispatch]);
 
+  useEffect(() => {
+    setLocalShotBoundaryProcessed(false);
+  }, [scene?.id]);
+
   const updateCurrentTime = useCallback(() => {
     if (videoElementRef.current) {
       dispatch(setCurrentVideoTime(videoElementRef.current.currentTime));

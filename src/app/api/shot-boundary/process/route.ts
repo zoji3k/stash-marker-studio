@@ -229,13 +229,14 @@ export async function POST(request: NextRequest) {
 
     const videoPath = await getSceneVideoPath(sceneId, serverConfig);
 
+    // Fetch tag name before deleting existing markers (so we fail fast if tag is invalid)
+    const tagName = await getTagName(config.shotBoundaryConfig.shotBoundary, serverConfig);
+
     // Delete existing shot boundary markers before re-running to prevent duplicates
     const existingIds = await getExistingShotBoundaryMarkerIds(sceneId, config.shotBoundaryConfig.shotBoundary, serverConfig);
     if (existingIds.length > 0) {
       await deleteShotBoundaryMarkers(existingIds, serverConfig);
     }
-
-    const tagName = await getTagName(config.shotBoundaryConfig.shotBoundary, serverConfig);
 
     const tempDir = await createTempDir();
     try {
